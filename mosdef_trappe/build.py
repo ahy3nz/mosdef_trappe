@@ -2,11 +2,6 @@ import unyt as u
 import mbuild as mb
 import foyer
 
-import molecules.propane.propane as propane
-
-
-# This is the compound we want to study
-cmpd = propane.Propane()
 
 def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
         density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
