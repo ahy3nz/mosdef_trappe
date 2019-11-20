@@ -2,6 +2,12 @@ import unyt as u
 import mbuild as mb
 import foyer
 
+def main():
+    from mosdef_trappe.molecules.propane.propane import Propane
+    cmpd = Propane()
+    build_simulate(cmpd, temperature=200*u.Kelvin, pressure=None,
+            density=615.5*u.kg/u.m**3, n_compounds=500, n_steps=5000)
+
 def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
         density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
         random_seed=42, engine='gromacs', n_steps=500000):
@@ -50,6 +56,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
 
     # Utilize foyer to parametrize our box
     ff = foyer.Forcefield(forcefield_files=cmpd.xml)
+    box = box.to_parmed(infer_residues=True)
     parametrized_structure = ff.apply(box, combining_rule='lorentz')
     parametrized_structure.save('compound.mol2', overwrite=True)
 
@@ -92,3 +99,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
                 pressure=pressure,
                 random_seed=random_seed,
                 n_steps=n_steps)
+
+if __name__ == "__main__":
+    main()
+
