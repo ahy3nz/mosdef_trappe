@@ -4,9 +4,12 @@ import foyer
 
 def main():
     from mosdef_trappe.molecules.propane.propane import Propane
+    import panedr
     cmpd = Propane()
     build_simulate(cmpd, temperature=200*u.Kelvin, pressure=None,
-            density=615.5*u.kg/u.m**3, n_compounds=500, n_steps=5000)
+            density=615.5*u.kg/u.m**3, n_compounds=500, n_steps=10000)
+    df = panedr.edr_to_df('md.edr')
+    print(df['Pressure'])
 
 def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
         density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
