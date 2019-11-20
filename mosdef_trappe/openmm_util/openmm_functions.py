@@ -5,7 +5,16 @@ import unyt
 
 def build_openmm_simulation(structure, temperature=300*unyt.Kelvin, 
         pressure=1*unyt.atm, random_seed=42, **kwargs):
-    """ Build OpenMM simulation from a parmed.Structure """
+    """ Build OpenMM simulation from a parmed.Structure 
+    
+    
+    Notes
+    -----
+    OpenMM does not compute a virial, which prevents us from
+    computing and reporting the pressure of a system. 
+    However, the montecarlobarostat does allow for a robust method to sample
+    under various pressures.
+    """
 
     # First convert unyt units into something consistent for OpenMM
     temperature.convert_to_units(unyt.Kelvin)
@@ -33,7 +42,7 @@ def build_openmm_simulation(structure, temperature=300*unyt.Kelvin,
     sim = app.Simulation(structure.topology, system, integrator)
     sim.context.setPositions(structure.positions)
 
-    sim.reporters.append(app.StateDataReporter(open('thermo.log','a'), 5000, 
+    sim.reporters.append(app.StateDataReporter(open('thermo.log','w'), 5000, 
                                                 step=True, time=True,
                                                 potentialEnergy=True,
                                                 temperature=True,
