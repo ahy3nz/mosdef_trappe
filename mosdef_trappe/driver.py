@@ -21,7 +21,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     density : unyt.Quantity
         Desired density for packing and siulation
     n_compounds : int
-    random_sseed : int
+    random_seed : int
     engine : str
         'gromacs', 'hoomd', 'openmm'
     n_steps : int
@@ -32,7 +32,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     Look inside the `X_utils` to further inspect the run-control
     parameters for engine X.
     While running this singular function once will work well for 
-    demonstrations, see `script_utils` for some modules that
+    demonstrations, see `script_util` for some modules that
     will manage and perform simulations of many state points
     """
     density.convert_to_units(u.kilogram/u.m**3)

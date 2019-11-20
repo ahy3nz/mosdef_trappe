@@ -15,4 +15,4 @@ to build and parametrize systems suitable for a variety of simulation engines
     * Geometric mean for epsilon
 
 ## Helpful Links
-* [NIST reference examples](https://www.nist.gov/mml/csd/chemical-informatics-research-group/lammps-md-equation-state-pressure-vs-density-trappe-0)
+* [NIST standard reference simulation website](https://www.nist.gov/programs-projects/nist-standard-reference-simulation-website)
