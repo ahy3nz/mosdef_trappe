@@ -1,5 +1,42 @@
 import unyt as u 
+import subprocess
 
+def run_grompp(mdp='md.mdp', gro='compound.gro', top='compound.top',
+        out='out'):
+    """ Run GMX grompp """
+    to_run = 'gmx grompp -f {mdp} -c {gro} -p {top} -o {out} -maxwarn 1'.format(
+            mdp=mdp, gro=gro, top=top, out=out)
+    grompp = subprocess.Popen(to_run, shell=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True)
+    out, err = grompp.communicate()
+    with open('grompp.out', 'w') as f:
+        f.write(out)
+    with open('grompp.err', 'w') as f:
+        f.write(err)
+
+    return grompp
+
+def run_md(out):
+    """Run gmx mdrun """
+    mdrun = subprocess.Popen('gmx mdrun -deffnm md',
+                shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True)
+    out, err = mdrun.communicate()
+    with open('mdrun.out', 'w') as f:
+        f.write(out)
+    with open('mdrun.err', 'w') as f:
+        f.write(err)
+
+    return mdrun
+
+
+def write_mdp(filename, **kwargs):
+    if pressure is None:
+        write_nvt_mdp(filename, **kwargs)
+    else:
+        write_npt_mdp(filename, **kwargs)
 
 def write_npt_mdp(filename, temperature=300*u.Kelvin,
         pressure=1*u.atm, random_seed=42,
