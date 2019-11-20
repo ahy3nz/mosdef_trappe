@@ -11,6 +11,7 @@ def run_hoomd_simulation(temperature=300*unyt.Kelvin,
             ['1-2', '1-3', '1-4'])
     hoomd.md.integrate.mode_standard(dt=0.002)
 
+    hoomd.md.integrate.mode_minimize_fire(0.002)
     temperature.convert_to_units(unyt.Kelvin)
     if pressure is not None:
         pressure.convert_to_units(unyt.amu/(unyt.nm*unyt.ps**2))

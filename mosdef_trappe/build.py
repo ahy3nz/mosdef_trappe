@@ -5,7 +5,7 @@ import foyer
 
 def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
         density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
-        random_seed=42, engine='gromacs'):
+        random_seed=42, engine='gromacs', n_steps=500000):
     # These are some basic physical properties for packing purposes
     density.convert_to_units(u.kilogram/u.m**3)
     temperature.convert_to_units(u.Kelvin)
@@ -27,21 +27,28 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
 
     # Implementing model for gromacs
     if engine.lower() == 'gromacs':
-        import gromacs_util.gromacs_functions as gmx_functions
+        import mosdef_trappe.gromacs_util.gromacs_functions as gmx_functions
         parametrized_structure.save('compound.gro', overwrite=True)
         parametrized_structure.save('compound.top', overwrite=True)
+
+        gmx_functions.write_em_mdp('em.mdp')
+        grompp = gmx_functions.run_grompp(mdp='em.mdp',
+                gro='compound.gro', top='compound.top', out='em')
+        if grompp.returncode == 0:
+            mdrun = gmx_functions.run_md('em')
+
         gmx_functions.write_mdp('md.mdp', 
                 temperature=temperature, 
                 pressure=pressure, 
                 n_steps=n_steps, random_seed=42)
         grompp = gmx_functions.run_grompp(mdp='md.mdp',
-                gro='compound.gro', top='compound.top', out='md')
+                gro='em.gro', top='compound.top', out='md')
         if grompp.returncode == 0:
             mdrun = gmx_functions.run_md('md')
     
     # Implementing model for openmm
     if engine.lower() == 'openmm':
-        import openmm_util.openmm_functions as omm_functions
+        import mosdef_trappe.openmm_util.openmm_functions as omm_functions
         sim = omm_functions.build_openmm_simulation(parametrized_structure, 
                 temperature=temperature,
                 pressure=pressure, random_seed=random_seed)
@@ -50,7 +57,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     # Implementing model for hoomd
     if engine.lower() == 'hoomd':
         from mbuild.formats.hoomd_simulation import create_hoomd_simulation
-        import hoomd_util.hoomd_functions as hoomd_functions
+        import mosdef_trappe.hoomd_util.hoomd_functions as hoomd_functions
         create_hoomd_simulation(parametrized_structure,
                 ref_distance=10, ref_energy=1/4.184, r_cut=1.4)
         hoomd_functions.run_hoomd_simulation(temperature=temperature,

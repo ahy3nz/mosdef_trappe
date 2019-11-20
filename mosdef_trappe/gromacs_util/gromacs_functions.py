@@ -17,9 +17,9 @@ def run_grompp(mdp='md.mdp', gro='compound.gro', top='compound.top',
 
     return grompp
 
-def run_md(out):
+def run_md(output):
     """Run gmx mdrun """
-    mdrun = subprocess.Popen('gmx mdrun -deffnm md',
+    mdrun = subprocess.Popen('gmx mdrun -deffnm {}'.format(output),
                 shell=True, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 universal_newlines=True)
@@ -32,11 +32,11 @@ def run_md(out):
     return mdrun
 
 
-def write_mdp(filename, **kwargs):
+def write_mdp(filename, pressure=None, **kwargs):
     if pressure is None:
         write_nvt_mdp(filename, **kwargs)
     else:
-        write_npt_mdp(filename, **kwargs)
+        write_npt_mdp(filename, pressure=pressure, **kwargs)
 
 def write_npt_mdp(filename, temperature=300*u.Kelvin,
         pressure=1*u.atm, random_seed=42,
@@ -174,3 +174,21 @@ gen_seed                = {random_seed}""".format(
         temperature=temperature.value,
         n_steps=n_steps,
         random_seed=random_seed))
+
+def write_em_mdp(filename):
+    with open(filename, 'w') as f:
+        f.write("""
+integrator  = steep     ; Algorithm (steep = steepest descent minimization)
+emtol       = 1000.0    ; Stop minimization when the maximum force < 1000.0 kJ/mol/nm
+emstep      = 0.01      ; Energy step size
+nsteps      = 50000     ; Maximum number of (minimization) steps to perform
+
+; Parameters describing how to find the neighbors of each atom and how to calculate the interactions
+nstlist         = 1         ; Frequency to update the neighbor list and long range forces
+cutoff-scheme   = Verlet
+ns_type         = grid      ; Method to determine neighbor list (simple, grid)
+coulombtype     = PME       ; Treatment of long range electrostatic interactions
+rcoulomb        = 1.0       ; Short-range electrostatic cut-off
+rvdw            = 1.0       ; Short-range Van der Waals cut-off
+pbc             = xyz       ; Periodic Boundary Conditions (yes/no)
+""")
