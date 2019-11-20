@@ -8,7 +8,7 @@ def main():
     cmpd = Propane()
     build_simulate(cmpd, n_compounds=500, 
             temperature=200*u.Kelvin, pressure=None, density=615.5*u.kg/u.m**3,  
-            n_steps=10000, engine='gromacs')
+            n_steps=50000, engine='gromacs')
     df = panedr.edr_to_df('md.edr')
     print(df['Pressure'])
 
@@ -62,7 +62,13 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     ff = foyer.Forcefield(forcefield_files=cmpd.xml)
     box = box.to_parmed(infer_residues=True)
     parametrized_structure = ff.apply(box, combining_rule='lorentz')
-    parametrized_structure.save('compound.mol2', overwrite=True)
+
+    # Dump initial coordinates, but need to scale coordinates back
+    # from Angstrom to nm
+    parametrized_structure.positions /= 10
+    copied.save('compound.pdb', overwrite=True)
+    copied.save('compound.mol2', overwrite=True)
+    parametrized_structure.positions *= 10
 
     # Implementing model for gromacs
     if engine.lower() == 'gromacs':
