@@ -6,8 +6,9 @@ def main():
     from mosdef_trappe.molecules.propane.propane import Propane
     import panedr
     cmpd = Propane()
-    build_simulate(cmpd, temperature=200*u.Kelvin, pressure=None,
-            density=615.5*u.kg/u.m**3, n_compounds=500, n_steps=10000)
+    build_simulate(cmpd, n_compounds=500, 
+            temperature=200*u.Kelvin, pressure=None, density=615.5*u.kg/u.m**3,  
+            n_steps=10000, engine='gromacs')
     df = panedr.edr_to_df('md.edr')
     print(df['Pressure'])
 
