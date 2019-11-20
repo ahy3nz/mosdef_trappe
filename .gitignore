@@ -4,6 +4,7 @@
 *.dcd
 *.gsd
 *.mdp
+*.txt
 
 *.py[cod]
 *.ipynb_checkpoints
