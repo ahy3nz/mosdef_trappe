@@ -20,6 +20,10 @@ def run_hoomd_simulation(temperature=300*unyt.Kelvin,
     else:
         integrator = hoomd.md.integrate.nvt(all_group,
                 kT=kb.value * temperature.value, tau=0.4)
-    integrator.randomize_velocities(random_seed)
 
+    hoomd.analyze.log('thermo.log', 
+            ['potential_energy', 'kinetic_energy', 'temperature', 'pressure'],
+            5000, header='PE, KE, T, P', overwrite=True)
+
+    integrator.randomize_velocities(random_seed)
     hoomd.run(n_steps)
