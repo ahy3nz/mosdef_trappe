@@ -7,15 +7,11 @@ def build_openmm_simulation(structure, temperature=300*unyt.Kelvin,
         pressure=1*unyt.atm, random_seed=42, **kwargs):
     """ Build OpenMM simulation from a parmed.Structure """
 
-    # First convert unyt units into something consistent
+    # First convert unyt units into something consistent for OpenMM
     temperature.convert_to_units(unyt.Kelvin)
     if pressure is not None:
         pressure.convert_to_units(unyt.bar)
 
-    # Then Cast unyt units into simtk units
-    #temperature = temperature.value * unit.kelvin
-    #if pressure is not None:
-    #    pressure = pressure.value * unit.atmosphere
     # hardcoded timestep - probably do not want to expose
     timestep = 2.0 * unyt.fs
     timestep.convert_to_units(unyt.ps)
