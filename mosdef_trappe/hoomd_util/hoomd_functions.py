@@ -4,6 +4,21 @@ import hoomd
 import hoomd.md
 kb = unyt.kb.in_units(unyt.amu*unyt.nm**2/(unyt.Kelvin*unyt.ps**2))
 
+def simulate(parametrized_structure, **kwargs):
+    """ Simulate in Hoomd 
+
+    Parameters
+    ----------
+    parametrized_structure : parmed.Structure
+    **kwargs : kwargs for run_hoomd_simulation
+    
+    """
+    from mbuild.formats.hoomd_simulation import create_hoomd_simulation
+    create_hoomd_simulation(parametrized_structure,
+            ref_distance=10, ref_energy=1/4.184, r_cut=1.4)
+    run_hoomd_simulation(**kwargs)
+
+
 def run_hoomd_simulation(temperature=300*unyt.Kelvin,
         pressure=1*unyt.atm, n_steps=500000, random_seed=42):
     all_group = hoomd.group.all()
@@ -29,3 +44,4 @@ def run_hoomd_simulation(temperature=300*unyt.Kelvin,
 
     integrator.randomize_velocities(random_seed)
     hoomd.run(n_steps)
+

@@ -3,6 +3,17 @@ import simtk.openmm as openmm
 import simtk.openmm.app as app
 import unyt
 
+def simulate(parametrized_structure, n_steps=500000, **kwargs):
+    """ Umbrella routine for running openmm simulation 
+    
+    Parameters
+    ----------
+    **kwargs : kwargs for build_openmm_simulation """
+    sim = build_openmm_simulation(parametrized_structure, **kwargs)
+
+    run_openmm_simulation(sim, n_steps=n_steps)
+
+
 def build_openmm_simulation(structure, temperature=300*unyt.Kelvin, 
         pressure=1*unyt.atm, random_seed=42, **kwargs):
     """ Build OpenMM simulation from a parmed.Structure 

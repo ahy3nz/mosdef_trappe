@@ -1,6 +1,29 @@
 import unyt as u 
 import subprocess
 
+def simulate(parametrized_structure, **kwargs):
+    """ Umbrella routine to simulate in gromacs 
+
+    Parameters
+    ----------
+    kwargs : keyword argumnets passed to write_mdp
+    """
+    parametrized_structure.save('compound.gro', overwrite=True)
+    parametrized_structure.save('compound.top', overwrite=True)
+
+    write_em_mdp('em.mdp')
+    grompp = run_grompp(mdp='em.mdp',
+            gro='compound.gro', top='compound.top', out='em')
+    if grompp.returncode == 0:
+        mdrun = run_md('em')
+
+    write_mdp('md.mdp', **kwargs)
+    grompp = run_grompp(mdp='md.mdp',
+            gro='em.gro', top='compound.top', out='md')
+    if grompp.returncode == 0:
+        mdrun = run_md('md')
+
+
 def run_grompp(mdp='md.mdp', gro='compound.gro', top='compound.top',
         out='out'):
     """ Run GMX grompp """
@@ -16,6 +39,7 @@ def run_grompp(mdp='md.mdp', gro='compound.gro', top='compound.top',
         f.write(err)
 
     return grompp
+
 
 def run_md(output):
     """Run gmx mdrun """
@@ -37,6 +61,7 @@ def write_mdp(filename, pressure=None, **kwargs):
         write_nvt_mdp(filename, **kwargs)
     else:
         write_npt_mdp(filename, pressure=pressure, **kwargs)
+
 
 def write_npt_mdp(filename, temperature=300*u.Kelvin,
         pressure=1*u.atm, random_seed=42,
@@ -174,6 +199,7 @@ gen_seed                = {random_seed}""".format(
         temperature=temperature.value,
         n_steps=n_steps,
         random_seed=random_seed))
+
 
 def write_em_mdp(filename):
     with open(filename, 'w') as f:
