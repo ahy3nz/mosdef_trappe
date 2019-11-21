@@ -6,35 +6,23 @@ def main():
     from mosdef_trappe.molecules.propane.propane import Propane
     import panedr
     cmpd = Propane()
-    build_simulate(cmpd, n_compounds=500, 
-            temperature=200*u.Kelvin, pressure=None, density=615.5*u.kg/u.m**3,  
-            n_steps=50000, engine='gromacs')
+    structure = build(cmpd, n_compounds=500, density=615.5*u.kg/u.m**3)
+    simulate(structure, temp=300*u.Kelvin, n_steps=50000, engine='gromacs',
+            pressure=None)
     df = panedr.edr_to_df('md.edr')
     print(df['Pressure'])
 
-def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
-        density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
-        random_seed=42, engine='gromacs', n_steps=500000):
+def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
     """ Build and simulate a TraPPE compound at a given state
-
-    This is the primary work function in this repo to 
-    simulate and sample from a particular thermodynamic state.
 
     Parameters
     ----------
     cmpd : mb.Compound
         This compound should also have the path to its XML as 
         `cmpd.xml`
-    temperature : unyt.Quantity
-    pressure : unyt.Quantity
-        If None, will run NVT
     density : unyt.Quantity
         Desired density for packing and siulation
     n_compounds : int
-    random_seed : int
-    engine : str
-        'gromacs', 'hoomd', 'openmm'
-    n_steps : int
 
     Notes
     -----
@@ -67,6 +55,24 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     parametrized_structure.save('compound.pdb', overwrite=True)
     parametrized_structure.save('compound.mol2', overwrite=True)
     parametrized_structure.save('compound.gro', overwrite=True)
+
+    return parametrized_structure
+
+def simulate(structure, temperature=300*u.Kelvin, pressure=None,
+        random_sweed=42, engine='gromacs', n_steps=500000):
+    """ Simulate a TraPPE compound at a given state
+
+    Parameters
+    -----------
+    structure : parmed.Structure
+    temperature : unyt.Quantity
+    pressure : unyt.Quantity
+        If None, will run NVT
+    random_seed : int
+    engine : str
+        'gromacs', 'hoomd', 'openmm'
+    n_steps : int
+    """
 
     # Implementing model for gromacs
     if engine.lower() == 'gromacs':
