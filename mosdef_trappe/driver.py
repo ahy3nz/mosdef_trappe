@@ -6,10 +6,14 @@ def main():
     from mosdef_trappe.molecules.propane.propane import Propane
     cmpd = Propane()
     structure = build(cmpd, n_compounds=500, density=615.5*u.kg/u.m**3)
+    second = build(cmpd, n_compounds=500, density=115.5*u.kg/u.m**3)
 
+    #import mosdef_trappe.gomc_util.gomc_functions as gomc_funcs
+    #gomc_funcs.simulate(structure, second, temperature=300*u.Kelvin,
+            #pressure=5*u.atm, n_steps=5000000)
     simulate(structure, 'gromacs', 
-            temperature=300*u.Kelvin, pressure=None,
-            n_steps=5000)
+            temperature=300*u.Kelvin, pressure=5*u.atm,
+            n_steps=50000000)
 
     #import panedr
     #df = panedr.edr_to_df('md.edr')
@@ -17,7 +21,7 @@ def main():
 
 
 def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
-    """ Build and simulate a TraPPE compound at a given state
+    """ Build and parametrize a TraPPE system at a given state
 
     Parameters
     ----------
@@ -28,14 +32,7 @@ def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
         Desired density for packing and siulation
     n_compounds : int
 
-    Notes
-    -----
-    Some run-control parameters will not be found inside this routine.
-    Look inside the `X_utils` to further inspect the run-control
-    parameters for engine X.
-    While running this singular function once will work well for 
-    demonstrations, see `script_util` for some modules that
-    will manage and perform simulations of many state points
+
     """
     density.convert_to_units(u.kilogram/u.m**3)
 
@@ -62,6 +59,24 @@ def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
     return parametrized_structure
 
 def simulate(structure, engine, **kwargs):
+    """ Simulate a structure in a particular engine
+
+    Parameters
+    ---------
+    structure : parmed.Structure
+    engine : str
+        'gromacs', 'hoomd', 'openmm', 'gomc'
+    **kwargs : run-control kwargs for particular engine
+
+    Notes
+    -----
+    Some run-control parameters will not be found inside this routine.
+    Look inside the `X_utils` to further inspect the run-control
+    parameters for engine X.
+    While running this singular function once will work well for 
+    demonstrations, see `script_util` for some modules that
+    will manage and perform simulations of many state points
+    """
     if engine.lower() == 'gromacs':
         import mosdef_trappe.gromacs_util.gromacs_functions as gmx_funcs
         gmx_funcs.simulate(structure, **kwargs) 

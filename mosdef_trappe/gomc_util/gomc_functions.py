@@ -3,8 +3,27 @@ import subprocess
 import unyt as u
 
 
-def simulate(parametrized_structure, **kwargs):
-    """ Simulate using GOMC"""
+def simulate(*args, **kwargs):
+    """ Simulate using GOMC
+    
+    Parameters
+    ----------
+    *args : Should be 1 or 2 parmed.Structure
+    **kwargs: kwargs for writing gomc input
+    """
+    if len(args) == 1:
+        simulate_single(*args, **kwargs)
+    elif len(args) ==2:
+        simulate_double(*args, **kwargs)
+
+def simulate_single(parametrized_structure, **kwargs):
+    """ Simulate a single box in GOMC
+
+    Parameters
+    ---------
+    parametrized_structure : parmed.Structure
+    **kwargs : kwargs for writing gomc input
+    """
     # Save PDB and PSF files
     parametrized_structure.save('coords.pdb', overwrite=True, use_hetatoms=False)
     parametrized_structure.save('structure.psf', overwrite=True)
@@ -19,19 +38,78 @@ def simulate(parametrized_structure, **kwargs):
             parametrized_structure)
     paramset.write(par='parameters.par')
 
+    # Post-process PAR file
+    modify_par_file('parameters.par')
+
+
     # Write GOMC run file, which requires box information and 
     # knowledge of other input files
-    write_gomc_nvt_input('in.conf', parametrized_structure, 
+    write_gomc_single_input('in.conf', parametrized_structure, 
             coords='coords.pdb', structure='structure.psf', 
             parameters='parameters.par', **kwargs)
+
+    run_single(**kwargs)
+
+def simulate_double(parametrized_structure, other_structure, **kwargs):
+    """ Simulate two boxes in GOMC
+
+    Parameters
+    ---------
+    parametrized_structure : parmed.Structure
+    other_structure : parmed.Structure
+    **kwargs : kwargs for writing gomc input
+    """
+    # Save PDB and PSF files
+    parametrized_structure.save('coords0.pdb', overwrite=True, use_hetatoms=False)
+    parametrized_structure.save('structure0.psf', overwrite=True)
+    other_structure.save('coords1.pdb', overwrite=True, use_hetatoms=False)
+    other_structure.save('structure1.psf', overwrite=True)
+
+
+    # Convert atomtypes to uppercase
+    for atom in parametrized_structure.atoms:
+        atom.type = atom.type.upper()
+        atom.atom_type.name = atom.atom_type.name.upper()
+    for atom in other_structure.atoms:
+        atom.type = atom.type.upper()
+        atom.atom_type.name = atom.atom_type.name.upper()
+
+
+    # Prepare parmed Structure by converting to CharmmParameterSet
+    paramset = parmed.charmm.CharmmParameterSet.from_structure(
+            parametrized_structure)
+    paramset.write(par='parameters.par')
 
     # Post-process PAR file
     modify_par_file('parameters.par')
 
-    run_nvt()
 
-def run_nvt():
-    p = subprocess.Popen('GOMC_CPU_NVT in.conf', shell=True,
+    # Write GOMC run file, which requires box information and 
+    # knowledge of other input files
+    write_gomc_double_input('in.conf', parametrized_structure, other_structure,
+            coords0='coords0.pdb', structure0='structure0.psf', 
+            coords1='coords1.pdb', structure1='structure1.psf', 
+            parameters='parameters.par', **kwargs)
+
+    run_double(**kwargs)
+
+def run_single(**kwargs):
+    if kwargs.get('pressure', None):
+        gomc_bin = 'GOMC_CPU_NPT'
+    else:
+        gomc_bin = 'GOMC_CPU_NVT'
+    p = subprocess.Popen('{} in.conf'.format(gomc_bin), shell=True,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    out, err = p.communicate()
+    with open("gomc.out", 'w') as f:
+        f.write(out)
+    with open("gomc.err", 'w') as f:
+        f.write(err)
+
+def run_double(**kwargs):
+    gomc_bin = 'GOMC_CPU_GEMC'
+    p = subprocess.Popen('{} in.conf'.format(gomc_bin), shell=True,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     universal_newlines=True)
     out, err = p.communicate()
@@ -66,11 +144,12 @@ def modify_par_file(par_file):
             f.write(line)
 
 
-def write_gomc_gemc_input(filename, param_structure0, param_structure1, 
-                            temperature=273*u.Kelvin, parameters='parameters.par',
+def write_gomc_double_input(filename, param_structure0, param_structure1, 
+                            temperature=273*u.Kelvin, pressure=None,
+                            parameters='parameters.par',
                             coords0='coords0.pdb', structure0='structure0.psf', 
                             coords1='coords1.pdb', structure1='structure1.psf',
-                            output='output'):
+                            output='output', n_steps=500000):
     """ Write GOMC input file for a GEMC simulation 
     
     Some simulation input parameters have been hard-coded in accordance with the 
@@ -87,8 +166,10 @@ def write_gomc_gemc_input(filename, param_structure0, param_structure1,
         Should be parametrized
     param_structure1: parmed.Structure
         Should be parametrized
-    temperature : float
-        Implicitly in Kelvin
+    temperature : unyt.Quantity
+        Will get converted to K
+    pressure : unyt.Quantityt, default None
+        Will get converted to bar if not None
     parameters : str
         CHARMM/NAMD-style PAR file for force field information
     coords0 : str
@@ -98,9 +179,11 @@ def write_gomc_gemc_input(filename, param_structure0, param_structure1,
     coords1 : str
         PDB file for param_structure0 coordinates and atom names
     structure1: str
-        PSF file for param_structure0 atomtypes, bonding information, and topology    
+        PSF file for param_structure0 atomtypes, 
+        bonding information, and topology    
     output : str
         Prefix for output files from simulation
+    n_steps : int
         
     Notes
     -----
@@ -108,6 +191,12 @@ def write_gomc_gemc_input(filename, param_structure0, param_structure1,
     GOMC input files utilize Angstroms, which are also the units of the parmed Structure box
     TraPPE uses 14 Angstrom cutoffs, but here we use 10 Angstrom because our simulations are small
     """
+    if pressure is None:
+        gemc_type = "GEMC   NVT"
+    else:
+        gemc_type = "GEMC   NPT\nPressure {}\n".format(pressure.in_units(
+            u.bar).value)
+
     with open(filename, 'w') as f:
         f.write(""" 
 ###########################################################################
@@ -153,7 +242,7 @@ Structure 1      {structure1}
 ##################################
 # GEMC TYPE (DEFULT IS NVT_GEMC)
 ##################################
-GEMC      NVT
+{gemc_type}
 
 #############################
 # SIMULATION CONDITION
@@ -161,7 +250,7 @@ GEMC      NVT
 Temperature     {temperature}
 Potential       VDW
 LRC     true
-Rcut        10
+Rcut        14
 Exclude     1-4
 
 #############################
@@ -178,7 +267,7 @@ PressureCalc  true  1000
 ################################
 # STEPS
 ################################
-RunSteps       1000000
+RunSteps       {n_steps}
 EqSteps        500000
 AdjSteps       1000
 
@@ -246,18 +335,65 @@ OutEnergy         true    true
 OutPressure       true    true
 OutMolNum         true    true
 OutDensity        true    true
-""".format(temperature=temperature.value, parameters=parameters,
+""".format(temperature=temperature.in_units(u.Kelvin).value,
+            parameters=parameters, gemc_type=gemc_type,
            structure0=structure0, coords0=coords0, 
            structure1=structure1, coords1=coords1,
            box0_x=param_structure0.box[0], box0_y=param_structure0.box[1], 
            box0_z=param_structure0.box[2],
            box1_x=param_structure1.box[0], box1_y=param_structure1.box[1], 
            box1_z=param_structure1.box[2],
-           output=output))
+           output=output, n_steps=n_steps))
 
-def write_gomc_nvt_input(filename, parm_structure, coords='coords.pdb',
+def write_gomc_single_input(filename, parm_structure, coords='coords.pdb',
                      structure='structure.psf', parameters='parameters.par',
-                    output='output', temperature=305*u.Kelvin):
+                    temperature=305*u.Kelvin, pressure=None,
+                    output='output', n_steps=500000):
+    """ Write GOMC input file for a single-box simulation 
+    
+    Some simulation input parameters have been hard-coded in accordance with the 
+    TraPPE specification. 
+    MC moves, CBMC parameters, and output control have been adapted from
+    https://github.com/GOMC-WSU/GOMC_Examples/tree/master/NVT_GEMC/pure_fluid/octane_T_360_00_K
+    
+    Parameters
+    ----------
+    filename : str
+    parm_structure: parmed.Structure
+        Should be parametrized
+    temperature : unyt.Quantity
+        Will get converted to K
+    pressure : unyt.Quantityt, default None
+        Will get converted to bar if not None
+    parameters : str
+        CHARMM/NAMD-style PAR file for force field information
+    coords : str
+        PDB file for param_structure coordinates and atom names
+    structure: str
+        PSF file for param_structure atomtypes, bonding information, and topology
+    output : str
+        Prefix for output files from simulation
+        
+    Notes
+    -----
+    Box dimensions are assumed to be orthorhombic
+    GOMC input files utilize Angstroms, which are also the units of the parmed Structure box
+    """
+    if pressure is None:
+        gemc_type = "GEMC   NVT"
+        move_set = """DisFreq               0.60
+RotFreq           0.10
+RegrowthFreq          0.30\n"""
+
+    else:
+        gemc_type = "GEMC   NPT\nPressure {}\n".format(pressure.in_units(
+            u.bar).value)
+        move_set = """DisFreq               0.59
+RotFreq           0.10
+RegrowthFreq          0.30
+VolFreq             0.01\n"""
+
+
     with open(filename, 'w') as f:
         f.write("""
 ###########################################################################
@@ -301,7 +437,7 @@ Structure 0      {structure}
 ##################################
 # GEMC TYPE (DEFULT IS NVT_GEMC)
 ##################################
-
+{gemc_type}
 
 #############################
 # SIMULATION CONDITION
@@ -309,7 +445,7 @@ Structure 0      {structure}
 Temperature     {temperature}
 Potential       VDW
 LRC     true
-Rcut        10
+Rcut        14
 Exclude     1-4
 
 #############################
@@ -322,17 +458,14 @@ PressureCalc  true  1000
 ################################
 # STEPS
 ################################
-RunSteps       1000000
+RunSteps       {n_steps}
 EqSteps        500000
 AdjSteps       1000
 
 ################################
 # MOVE FREQUENCY
 ################################
-DisFreq               0.60
-RotFreq           0.10
-RegrowthFreq          0.30
-
+{move_set}
 
 ################################
 # BOX DIMENSION #, X, Y, Z
@@ -384,7 +517,7 @@ OutEnergy         true    true
 OutPressure       true    true
 OutMolNum         true    true
 OutDensity        true    true
-""".format(structure=structure, coords=coords, 
+""".format(structure=structure, coords=coords, gemc_type=gemc_type,
         parameters=parameters, output=output, temperature=temperature.value,
         box_x=parm_structure.box[0], box_y=parm_structure.box[1], 
-        box_z=parm_structure.box[2]))
+        box_z=parm_structure.box[2], n_steps=n_steps, move_set=move_set))
