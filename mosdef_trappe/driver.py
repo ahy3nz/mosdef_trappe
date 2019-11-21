@@ -63,12 +63,10 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
     box = box.to_parmed(infer_residues=True)
     parametrized_structure = ff.apply(box, combining_rule='lorentz')
 
-    # Dump initial coordinates, but need to scale coordinates back
-    # from Angstrom to nm
-    parametrized_structure.positions /= 10
-    copied.save('compound.pdb', overwrite=True)
-    copied.save('compound.mol2', overwrite=True)
-    parametrized_structure.positions *= 10
+    # Dump initial coordinates
+    parametrized_structure.save('compound.pdb', overwrite=True)
+    parametrized_structure.save('compound.mol2', overwrite=True)
+    parametrized_structure.save('compound.gro', overwrite=True)
 
     # Implementing model for gromacs
     if engine.lower() == 'gromacs':
@@ -97,7 +95,7 @@ def build_simulate(cmpd, temperature=300*u.Kelvin, pressure=None,
         sim = omm_functions.build_openmm_simulation(parametrized_structure, 
                 temperature=temperature,
                 pressure=pressure, random_seed=random_seed)
-        omm_functions.run_openmm_simulation(n_steps=n_steps)
+        omm_functions.run_openmm_simulation(sim, n_steps=n_steps)
 
     # Implementing model for hoomd
     if engine.lower() == 'hoomd':
