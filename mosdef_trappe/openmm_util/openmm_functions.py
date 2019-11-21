@@ -54,7 +54,8 @@ def build_openmm_simulation(structure, temperature=300*unyt.Kelvin,
 
 
 def run_openmm_simulation(sim, n_steps=500000):
+    sim.minimizeEnergy(maxIterations=50000)
     sim.step(n_steps)
 
-    pdbreporter = app.PDBReporter('trajectory.pdb', 1)
+    pdbreporter = app.PDBReporter('final_frame.pdb', 1)
     pdbreporter.report(sim, sim.context.getState(-1))
