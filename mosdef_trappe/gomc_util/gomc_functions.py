@@ -22,6 +22,18 @@ def simulate(*args, **kwargs):
 
     return p 
 
+def restart(gomc_bin="GOMC_CPU_GEMC"):
+    p = subprocess.Popen('{} restart.conf'.format(gomc_bin), shell=True,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    out, err = p.communicate()
+    with open("gomc_restart.out", 'w') as f:
+        f.write(out)
+    with open("gomc_restart.err", 'w') as f:
+        f.write(err)
+
+    return p 
+
 def simulate_single(parametrized_structure, **kwargs):
     """ Simulate a single box in GOMC
 
