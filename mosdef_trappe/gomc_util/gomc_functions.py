@@ -14,11 +14,29 @@ def simulate(*args, **kwargs):
     ----------
     *args : Should be 1 or 2 parmed.Structure
     **kwargs: kwargs for writing gomc input
+
+    Returns
+    -------
+    p : subprocess
     """
     if len(args) == 1:
-        simulate_single(*args, **kwargs)
+        p = simulate_single(*args, **kwargs)
     elif len(args) ==2:
-        simulate_double(*args, **kwargs)
+        p = simulate_double(*args, **kwargs)
+
+    return p 
+
+def restart(gomc_bin="GOMC_CPU_GEMC"):
+    p = subprocess.Popen('{} restart.conf'.format(gomc_bin), shell=True,
+                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    out, err = p.communicate()
+    with open("gomc_restart.out", 'w') as f:
+        f.write(out)
+    with open("gomc_restart.err", 'w') as f:
+        f.write(err)
+
+    return p 
 
 def simulate_single(parametrized_structure, **kwargs):
     """ Simulate a single box in GOMC
@@ -52,7 +70,9 @@ def simulate_single(parametrized_structure, **kwargs):
             coords='coords.pdb', structure='structure.psf', 
             parameters='parameters.par', **kwargs)
 
-    run_single(**kwargs)
+    p = run_single(**kwargs)
+
+    return p
 
 def simulate_double(parametrized_structure, other_structure, **kwargs):
     """ Simulate two boxes in GOMC
@@ -95,7 +115,14 @@ def simulate_double(parametrized_structure, other_structure, **kwargs):
             coords1='coords1.pdb', structure1='structure1.psf', 
             parameters='parameters.par', **kwargs)
 
-    run_double(**kwargs)
+    write_gomc_double_restart('restart.conf', parametrized_structure, other_structure,
+            coords0='output_BOX_0_restart.pdb', structure0='structure0.psf',
+            coords1='output_BOX_1_restart.pdb', structure1='structure1.psf',
+            parameters='parameters.par', output='restart1', **kwargs)
+
+    p = run_double(**kwargs)
+
+    return p 
 
 def run_single(**kwargs):
     if kwargs.get('pressure', None):
@@ -111,9 +138,11 @@ def run_single(**kwargs):
     with open("gomc.err", 'w') as f:
         f.write(err)
 
+    return p 
+
 def run_double(**kwargs):
     gomc_bin = 'GOMC_CPU_GEMC'
-    p = subprocess.Popen('{} in.conf'.format(gomc_bin), shell=True,
+    p = subprocess.Popen('{} +p16 in.conf'.format(gomc_bin), shell=True,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     universal_newlines=True)
     out, err = p.communicate()
@@ -140,6 +169,8 @@ def dat_to_df(filename):
     df['TOT_DENS'] = df['TOT_DENS']*(1*u.kg/u.m**3).in_units(u.g/u.cm**3).value
     df['TOT_EN'] = df['TOT_EN']*(1*u.Kelvin*u.boltzmann_constant*6.022e23).in_units(u.kilojoule).value
     return df
+
+    return p 
 
 def modify_par_file(par_file):
     """ GOMC parameter files do not use the atoms or impropers directive"""
@@ -292,7 +323,7 @@ PressureCalc  true  1000
 ################################
 RunSteps       {n_steps}
 EqSteps        500000
-AdjSteps       1000
+AdjSteps       10000
 
 ################################
 # MOVE FREQUENCY
@@ -544,3 +575,204 @@ OutDensity        true    true
         parameters=parameters, output=output, temperature=temperature.value,
         box_x=parm_structure.box[0], box_y=parm_structure.box[1], 
         box_z=parm_structure.box[2], n_steps=n_steps, move_set=move_set))
+
+def write_gomc_double_restart(filename, param_structure0, param_structure1, 
+                            temperature=273*u.Kelvin, pressure=None,
+                            parameters='parameters.par',
+                            coords0='coords0.pdb', structure0='structure0.psf', 
+                            coords1='coords1.pdb', structure1='structure1.psf',
+                            output='restart1', n_steps=500000):
+    """ Write GOMC input file for a GEMC simulation 
+    
+    Some simulation input parameters have been hard-coded in accordance with the 
+    TraPPE specification. 
+    MC moves, CBMC parameters, and output control have been adapted from
+    https://github.com/GOMC-WSU/GOMC_Examples/tree/master/NVT_GEMC/pure_fluid/octane_T_360_00_K
+    Gibbs Ensemble Monte Carlo involves simultaneous simulations of 
+    two boxes (generally corresponding to two different phases)
+    
+    Parameters
+    ----------
+    filename : str
+    param_structure0: parmed.Structure
+        Should be parametrized
+    param_structure1: parmed.Structure
+        Should be parametrized
+    temperature : unyt.Quantity
+        Will get converted to K
+    pressure : unyt.Quantityt, default None
+        Will get converted to bar if not None
+    parameters : str
+        CHARMM/NAMD-style PAR file for force field information
+    coords0 : str
+        PDB file for param_structure0 coordinates and atom names
+    structure0: str
+        PSF file for param_structure0 atomtypes, bonding information, and topology
+    coords1 : str
+        PDB file for param_structure0 coordinates and atom names
+    structure1: str
+        PSF file for param_structure0 atomtypes, 
+        bonding information, and topology    
+    output : str
+        Prefix for output files from simulation
+    n_steps : int
+        
+    Notes
+    -----
+    Box dimensions are assumed to be orthorhombic
+    GOMC input files utilize Angstroms, which are also the units of the parmed Structure box
+    TraPPE uses 14 Angstrom cutoffs, but here we use 10 Angstrom because our simulations are small
+    """
+    if pressure is None:
+        gemc_type = "GEMC   NVT"
+    else:
+        gemc_type = "GEMC   NPT\nPressure {}\n".format(pressure.in_units(
+            u.bar).value)
+
+    with open(filename, 'w') as f:
+        f.write(""" 
+###########################################################################
+#  ========-------------------- INPUT --------------------------===========
+############################################################################
+
+#########################
+# enable, step
+#########################
+Restart     True
+
+
+####################################
+# kind (RESTART, RANDOM, INTSEED)
+####################################
+PRNG        RANDOM
+
+####################################
+# FORCE FIELD
+####################################
+ParaTypeCHARMM   true
+ParaTypeEXOTIC   false
+Parameters      {parameters}
+
+####################################
+# INPUT PDB FILES
+####################################
+Coordinates 0    {coords0}
+Coordinates 1    {coords1}
+
+####################################
+# INPUT PSF FILES
+####################################
+Structure 0      {structure0}
+Structure 1      {structure1}
+
+
+
+############################################################################
+#  =======--------------------- SYSTEM --------------------------===========
+############################################################################
+
+##################################
+# GEMC TYPE (DEFULT IS NVT_GEMC)
+##################################
+{gemc_type}
+
+#############################
+# SIMULATION CONDITION
+#############################
+Temperature     {temperature}
+Potential       VDW
+LRC     true
+Rcut        14
+Exclude     1-4
+
+#############################
+# ELECTROSTATIC
+#############################
+ElectroStatic   false
+Ewald           false
+
+################################
+# PRESSURE FREQ
+################################
+PressureCalc  true  1000
+
+################################
+# STEPS
+################################
+RunSteps       {n_steps}
+EqSteps        500000
+AdjSteps       10000
+
+################################
+# MOVE FREQUENCY
+################################
+DisFreq               0.49
+RotFreq           0.10
+VolFreq           0.01
+SwapFreq          0.20
+RegrowthFreq          0.10
+CrankShaftFreq        0.10
+
+################################
+# BOX DIMENSION #, X, Y, Z
+################################
+#CellBasisVector1 0  {box0_x}  0.00    0.00
+#CellBasisVector2 0  0.00    {box0_y}  0.00
+#CellBasisVector3 0  0.00    0.00    {box0_z}
+
+#CellBasisVector1 1  {box1_x}  0.00    0.00
+#CellBasisVector2 1  0.00    {box1_y}  0.00
+#CellBasisVector3 1  0.00    0.00    {box1_z}
+
+
+##############################
+# CBMC TRIALS
+##############################
+CBMC_First   10
+CBMC_Nth     8
+CBMC_Ang     100
+CBMC_Dih     30
+
+####################################
+#          Mol. Name     Chem. Pot.
+####################################
+############################################################################
+#  =======-------------------- OUTPUT --------------------------===========
+############################################################################
+
+##########################
+# statistics filename add
+##########################
+OutputName  {output}
+
+#####################################
+# enable, frequency
+#####################################
+CoordinatesFreq    true   1000000
+RestartFreq        true   1000000
+ConsoleFreq        true   100000
+BlockAverageFreq   true   100000
+HistogramFreq      false  100000
+
+
+################################
+# OutHistSettings
+################################
+
+
+##################################
+# enable: blk avg., fluct.
+##################################
+OutEnergy         true    true
+OutPressure       true    true
+OutMolNum         true    true
+OutDensity        true    true
+""".format(temperature=temperature.in_units(u.Kelvin).value,
+            parameters=parameters, gemc_type=gemc_type,
+           structure0=structure0, coords0=coords0, 
+           structure1=structure1, coords1=coords1,
+           box0_x=param_structure0.box[0], box0_y=param_structure0.box[1], 
+           box0_z=param_structure0.box[2],
+           box1_x=param_structure1.box[0], box1_y=param_structure1.box[1], 
+           box1_z=param_structure1.box[2],
+           output=output, n_steps=n_steps))
