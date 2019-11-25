@@ -1,5 +1,6 @@
 import unyt as u
 import mbuild as mb
+import numpy as np
 import foyer
 
 def main():
@@ -20,7 +21,8 @@ def main():
     #print(df['Pressure'])
 
 
-def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
+def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000, 
+        ff='ff/TraPPE_UA_3_fully_flexible_propane.xml'):
     """ Build and parametrize a TraPPE system at a given state
 
     Parameters
@@ -38,8 +40,9 @@ def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
 
     # Pack a box
     box = mb.fill_box(cmpd, n_compounds=n_compounds, density=density.value)
-    from mbuild.utils.geometry import wrap_coords
-    new_xyz = wrap_coords(box.xyz, box.periodicity)
+
+    # Wrap coordinates
+    new_xyz = box.xyz - 1 * np.floor_divide(box.xyz, box.periodicity) * box.periodicity
     box.xyz = new_xyz
 
     # Apply non-atomistic, custom element naming convention
@@ -47,7 +50,7 @@ def build(cmpd, density=0.5*u.gram/(u.cm**3), n_compounds=1000):
         part.name = "_" + part.name
 
     # Utilize foyer to parametrize our box
-    ff = foyer.Forcefield(forcefield_files=cmpd.xml)
+    ff = foyer.Forcefield(forcefield_files=ff)
     box = box.to_parmed(infer_residues=True)
     parametrized_structure = ff.apply(box, combining_rule='lorentz')
 
@@ -73,9 +76,6 @@ def simulate(structure, engine, **kwargs):
     Some run-control parameters will not be found inside this routine.
     Look inside the `X_utils` to further inspect the run-control
     parameters for engine X.
-    While running this singular function once will work well for 
-    demonstrations, see `script_util` for some modules that
-    will manage and perform simulations of many state points
     """
     if engine.lower() == 'gromacs':
         import mosdef_trappe.gromacs_util.gromacs_functions as gmx_funcs
