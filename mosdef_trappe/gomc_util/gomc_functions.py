@@ -121,6 +121,25 @@ def run_double(**kwargs):
         f.write(out)
     with open("gomc.err", 'w') as f:
         f.write(err)
+        
+def dat_to_df(filename):
+    """ Convert GOMC DAT file to pandas DataFrame
+    
+    Notes
+    -----
+    TOT_DENS [kg/m**3] converted to [g/cm**3]
+    TOT_EN [K] converted to [kJ/mol]
+    """
+    data = np.loadtxt(filename)
+    if len(data) == 0:
+        return None
+    columns = open(filename, 'r').readlines()[0]
+    df = pd.DataFrame(data, columns=columns.split())
+    
+    mass = 30.07 * u.g
+    df['TOT_DENS'] = df['TOT_DENS']*(1*u.kg/u.m**3).in_units(u.g/u.cm**3).value
+    df['TOT_EN'] = df['TOT_EN']*(1*u.Kelvin*u.boltzmann_constant*6.022e23).in_units(u.kilojoule).value
+    return df
 
 def modify_par_file(par_file):
     """ GOMC parameter files do not use the atoms or impropers directive"""
