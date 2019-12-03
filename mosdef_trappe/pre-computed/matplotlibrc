@@ -1,0 +1,15 @@
+# matplotlib 2.x
+#font.family         : sans-serif
+font.sans-serif     : Helvetica, Bitstream Vera Sans, Helvetica, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif
+axes.grid           : True
+grid.color          :   b0b0b0
+grid.linestyle      : :
+axes.labelsize      : large
+#axes.prop_cycle     : cycler('color', ['568cec', '27ae60', 'f1c40f', 'a93226'])
+legend.fancybox     : True
+legend.numpoints    : 1 
+legend.frameon      : True
+legend.framealpha   : 0.8
+legend.edgecolor    : 000000
+legend.facecolor    : white
+savefig.bbox        : tight
