@@ -150,6 +150,8 @@ def run_double(**kwargs):
         f.write(out)
     with open("gomc.err", 'w') as f:
         f.write(err)
+
+    return p
         
 def dat_to_df(filename):
     """ Convert GOMC DAT file to pandas DataFrame
@@ -171,7 +173,6 @@ def dat_to_df(filename):
     df['TOT_EN'] = df['TOT_EN']*(1*u.Kelvin*u.boltzmann_constant*6.022e23).in_units(u.kilojoule).value
     return df
 
-    return p 
 
 def modify_par_file(par_file):
     """ GOMC parameter files do not use the atoms or impropers directive"""
@@ -197,7 +198,6 @@ def modify_par_file(par_file):
     with open(par_file, 'w') as f:
         for line in modified_parlines:
             f.write(line)
-
 
 def write_gomc_double_input(filename, param_structure0, param_structure1, 
                             temperature=273*u.Kelvin, pressure=None,
