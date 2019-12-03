@@ -24,9 +24,14 @@ def run_hoomd_simulation(temperature=300*unyt.Kelvin,
     all_group = hoomd.group.all()
     hoomd.context.current.neighbor_lists[0].reset_exclusions(
             ['1-2', '1-3', '1-4'])
+    fire = hoomd.md.integrate.mode_minimize_fire(0.002)
+    nve_integrator = hoomd.md.integrate.nve(group=all_group)
+    while not (fire.has_converged()):
+        hoomd.run(1000)
+    nve_integrator.disable()
+
     hoomd.md.integrate.mode_standard(dt=0.002)
 
-    hoomd.md.integrate.mode_minimize_fire(0.002)
     temperature.convert_to_units(unyt.Kelvin)
     if pressure is not None:
         pressure.convert_to_units(unyt.amu/(unyt.nm*unyt.ps**2))
