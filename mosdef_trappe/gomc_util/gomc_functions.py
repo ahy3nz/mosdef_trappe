@@ -158,6 +158,7 @@ def dat_to_df(filename):
     -----
     TOT_DENS [kg/m**3] converted to [g/cm**3]
     TOT_EN [K] converted to [kJ/mol]
+    PRESSURE [bar] is left alone
     """
     data = np.loadtxt(filename)
     if len(data) == 0:
