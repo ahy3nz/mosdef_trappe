@@ -124,12 +124,12 @@ def simulate_double(parametrized_structure, other_structure, **kwargs):
 
     return p 
 
-def run_single(**kwargs):
+def run_single(gomc_bin=None, flags='+p2', **kwargs):
     if kwargs.get('pressure', None):
         gomc_bin = 'GOMC_CPU_NPT'
     else:
         gomc_bin = 'GOMC_CPU_NVT'
-    p = subprocess.Popen('{} in.conf'.format(gomc_bin), shell=True,
+    p = subprocess.Popen('{} {} in.conf'.format(gomc_bin, flags), shell=True,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     universal_newlines=True)
     out, err = p.communicate()
@@ -140,9 +140,8 @@ def run_single(**kwargs):
 
     return p 
 
-def run_double(**kwargs):
-    gomc_bin = 'GOMC_CPU_GEMC'
-    p = subprocess.Popen('{} +p16 in.conf'.format(gomc_bin), shell=True,
+def run_double(gomc_bin='GOMC_CPU_GEMC', flags='+p2', **kwargs):
+    p = subprocess.Popen('{} {} in.conf'.format(gomc_bin, flags), shell=True,
                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     universal_newlines=True)
     out, err = p.communicate()
