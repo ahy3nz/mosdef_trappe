@@ -13,4 +13,4 @@
 export OMP_NUM_THREADS=16
 cd /global/cscratch1/sd/ahy3nz/Trajectories/gomc5/236
 source activate py36
-GOMC_CPU_GEMC +p16 restart3.conf
+GOMC_CPU_GEMC +p16 restart4.conf
