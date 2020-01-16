@@ -2,6 +2,10 @@
 Utilizing the Molecular Simulation Design Framework with the TraPPE force field
 to build and parametrize systems suitable for a variety of simulation engines
 
+## Examples
+To run the examples from this git repo, `cd` into `mosdef_trappe/mosdef_trappe`.
+The examples should be run from the same directory as the examples themselves. 
+
 ## TraPPE implementation details
 * 1.4 nm cutoff
 * Tail corrections to LJ interactions
