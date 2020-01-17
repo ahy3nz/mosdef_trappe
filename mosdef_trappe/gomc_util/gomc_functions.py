@@ -322,7 +322,7 @@ PressureCalc  true  1000
 # STEPS
 ################################
 RunSteps       {n_steps}
-EqSteps        500000
+EqSteps        50000
 AdjSteps       10000
 
 ################################
@@ -372,9 +372,9 @@ OutputName  {output}
 #####################################
 CoordinatesFreq    true   1000000
 RestartFreq        true   1000000
-ConsoleFreq        true   100000
-BlockAverageFreq   true   100000
-HistogramFreq      false  100000
+ConsoleFreq        true   10000
+BlockAverageFreq   true   10000
+HistogramFreq      false  10000
 
 
 ################################
@@ -513,8 +513,8 @@ PressureCalc  true  1000
 # STEPS
 ################################
 RunSteps       {n_steps}
-EqSteps        500000
-AdjSteps       1000
+EqSteps        50000
+AdjSteps       10000
 
 ################################
 # MOVE FREQUENCY
@@ -554,9 +554,9 @@ OutputName  {output}
 #####################################
 CoordinatesFreq    true   1000000
 RestartFreq        true   1000000
-ConsoleFreq        true   100000
-BlockAverageFreq   true   100000
-HistogramFreq      false  100000
+ConsoleFreq        true   10000
+BlockAverageFreq   true   10000
+HistogramFreq      false  10000
 
 
 ################################
@@ -700,7 +700,7 @@ PressureCalc  true  1000
 # STEPS
 ################################
 RunSteps       {n_steps}
-EqSteps        500000
+EqSteps        50000
 AdjSteps       10000
 
 ################################
@@ -750,9 +750,9 @@ OutputName  {output}
 #####################################
 CoordinatesFreq    true   1000000
 RestartFreq        true   1000000
-ConsoleFreq        true   100000
-BlockAverageFreq   true   100000
-HistogramFreq      false  100000
+ConsoleFreq        true   10000
+BlockAverageFreq   true   10000
+HistogramFreq      false  10000
 
 
 ################################
